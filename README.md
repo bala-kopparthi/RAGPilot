@@ -1,10 +1,10 @@
-# QA Knowledge Assistant — Local RAG Prototype
+# RAGPilot — Offline RAG Knowledge Assistant using LangChain, ChromaDB & Ollama
 
 > Built by [bala-kopparthi](https://github.com/bala-kopparthi) · May 2026
 
 ## Overview
 
-QA Knowledge Assistant is a fully local Retrieval-Augmented Generation (RAG) system that lets you ask natural-language questions about your own QA documents — test cases, bug reports, and requirements specs — and get grounded, cited answers without sending any data to the cloud. Built as my first hands-on RAG prototype using Claude Code, it demonstrates the core AI engineering skills I am developing on AI engineering: document ingestion, vector search, prompt engineering, and local LLM integration.
+RAGPilot is a fully local Retrieval-Augmented Generation (RAG) system that lets you ask natural-language questions about your own QA documents — test cases, bug reports, and requirements specs — and get grounded, cited answers without sending any data to the cloud. Built as my first hands-on RAG prototype using Claude Code, it demonstrates the core AI engineering skills I am developing on AI engineering: document ingestion, vector search, prompt engineering, and local LLM integration.
 
 ---
 
