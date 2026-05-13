@@ -103,8 +103,8 @@ ollama list
 ### 2 — Clone the repository
 
 ```bash
-git clone https://github.com/bala-kopparthi/RAG-prototype-claudecode.git
-cd RAG-prototype-claudecode
+git clone https://github.com/bala-kopparthi/RAGPilot.git
+cd RAGPilot
 ```
 
 ### 3 — Create the virtual environment
