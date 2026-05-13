@@ -18,4 +18,4 @@ This project demonstrates the implementation of a Retrieval-Augmented Generation
 
 ## About
 
-This portfolio project showcases my transition from QA Leadership into AI Engineering.
+This portfolio project showcases building of my first RAG prototype (mini project) using Claude Code
