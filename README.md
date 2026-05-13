@@ -1,6 +1,6 @@
 # RAG Prototype
 
-Local RAG prototype built with Ollama, ChromaDB, and LangChain — a portfolio project transitioning from QA Lead to AI engineering
+Local RAG prototype built with Ollama, ChromaDB, and LangChain — a portfolio project transitioning to AI engineering
 
 ## Overview
 
