@@ -1,0 +1,122 @@
+BUG REPORT
+================================================================================
+Bug ID       : BUG-117
+Title        : Password reset email not delivered when username contains uppercase letters
+Project      : NexaBank Customer Portal
+Module       : Authentication — Password Reset Flow
+Reported By  : QA Engineer, Bala K.
+Date Reported: 2026-04-28
+Last Updated : 2026-05-02
+================================================================================
+
+SEVERITY   : High
+PRIORITY   : P1
+STATUS     : In Progress (assigned to Dev — Sprint 22)
+BUILD      : v3.6.2-staging
+ENVIRONMENT: Staging (https://staging.nexabank.internal)
+RELATED TC : TC-051 (Password Reset — Happy Path)
+
+================================================================================
+DESCRIPTION
+================================================================================
+When a registered user attempts to reset their password and their username
+contains one or more uppercase letters (e.g., "Alice.Brown@nexabank.com"),
+the system accepts the reset request and displays the success message
+"Check your inbox for a reset link", but the password reset email is never
+delivered to the user's inbox.
+
+Users with fully lowercase usernames (e.g., "alice.brown@nexabank.com") are
+not affected — they receive the reset email within 30 seconds as expected.
+
+This bug effectively locks out any user whose account was registered with
+mixed-case email input, preventing them from regaining access to their account.
+
+================================================================================
+STEPS TO REPRODUCE
+================================================================================
+1. Navigate to https://staging.nexabank.internal/login
+2. Click "Forgot Password?"
+3. In the "Email Address" field, enter a registered email with at least one
+   uppercase letter: Alice.Brown@nexabank.com
+   (Ensure this account exists in the staging user database — use test account
+   from the QA credentials sheet, row 14)
+4. Click "Send Reset Link".
+5. Observe the on-screen confirmation message.
+6. Open Mailtrap (https://mailtrap.io) and monitor the staging inbox for
+   the test account.
+7. Wait 5 minutes.
+
+EXPECTED RESULT:
+- Step 5: Page displays "Check your inbox for a reset link."
+- Step 6-7: A password reset email arrives within 60 seconds with subject
+  "NexaBank: Reset your password" containing a valid reset link.
+
+ACTUAL RESULT:
+- Step 5: Page correctly displays "Check your inbox for a reset link." ✓
+- Step 6-7: No email is received after waiting 5+ minutes. ✗
+  Mailtrap inbox remains empty. No email in spam/junk either.
+
+================================================================================
+ROOT CAUSE HYPOTHESIS
+================================================================================
+Suspected case-sensitivity mismatch in the email lookup service.
+
+The authentication service likely stores all usernames in lowercase in the
+database (normalised at registration). However, the password reset endpoint
+appears to pass the raw user-submitted email (preserving uppercase) directly
+to the email dispatch queue — without normalising it first.
+
+The email dispatch service performs a case-sensitive lookup against the
+stored (lowercase) username, finds no match, and silently drops the request
+without returning an error to the UI or logging a failure.
+
+This is a "silent failure" — the UI shows success because the API returned
+HTTP 200, but the background job never ran.
+
+================================================================================
+ADDITIONAL EVIDENCE
+================================================================================
+- Tested with 3 different mixed-case accounts: all reproduce the issue.
+- Tested with 3 different lowercase accounts: all work correctly.
+- No error appears in the UI in either case (misleading success message shown).
+- Server logs for the staging environment do not show an email dispatch event
+  for the mixed-case requests (log lines expected: "EMAIL_DISPATCH: queued
+  for <address>" — absent for failing cases).
+- The registration flow DOES accept mixed-case email at signup (confirmed by
+  checking the database — stored value is lowercased, but UI accepts mixed case).
+
+================================================================================
+IMPACT
+================================================================================
+- Any user who registered with mixed-case email characters cannot reset their
+  password via self-service.
+- Estimated ~12% of accounts in staging DB have mixed-case usernames based on
+  a sample query (SELECT count(*) WHERE email != LOWER(email)).
+- Workaround: None available to end user. Manual password reset by support team
+  only option.
+
+================================================================================
+ATTACHMENTS
+================================================================================
+- screenshot_success_message.png  — shows the misleading "Check your inbox" UI
+- mailtrap_empty_inbox.png        — shows empty inbox after 5-minute wait
+- server_log_extract.txt          — log comparison between working and failing
+                                    requests (email dispatch line absent)
+
+================================================================================
+SUGGESTED FIX
+================================================================================
+In the password reset endpoint, normalise the submitted email to lowercase
+before passing it to the email dispatch service:
+
+  submitted_email = request.email.strip().lower()
+
+Apply the same normalisation at registration, login, and all other auth
+entry points for consistency.
+
+================================================================================
+REGRESSION NOTES
+================================================================================
+This issue was NOT present in v3.5.0 (confirmed by running TC-051 against
+the v3.5.0 build — PASSED). Regression introduced between v3.5.0 and v3.6.0.
+Suspect related to the email service refactor in PR #884 (Sprint 19).

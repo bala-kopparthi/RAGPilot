@@ -1,0 +1,175 @@
+TEST CASE DOCUMENT
+================================================================================
+Test Case ID  : TC-051
+Title         : Successful password reset via email link (happy path)
+Project       : NexaBank Customer Portal
+Module        : Authentication — Password Reset Flow
+Author        : QA Engineer, Bala K.
+Reviewed By   : QA Lead
+Date Created  : 2026-04-20
+Last Updated  : 2026-05-02
+================================================================================
+
+PRIORITY     : High
+STATUS       : Active
+TEST TYPE    : Functional — End-to-End
+LINKED REQ   : REQ-040 (Self-Service Password Reset)
+RELATED BUGS : BUG-117 (Password reset email not sent for mixed-case usernames)
+               BUG-098 (Reset link expired prematurely — RESOLVED v3.5.1)
+AUTOMATION   : Planned — Selenium / Playwright (Sprint 23)
+================================================================================
+
+OBJECTIVE
+================================================================================
+Verify that a registered user with a valid lowercase email address can
+successfully reset their password through the self-service password reset flow,
+receive a reset email, and log in using the new password.
+
+Note: This test case covers the happy path only. For negative scenarios
+(wrong email, expired link, mixed-case username regression), see:
+  TC-052 — Invalid email address on password reset
+  TC-053 — Expired reset link behaviour
+  BUG-117 — Mixed-case username regression (currently open)
+
+================================================================================
+PRECONDITIONS
+================================================================================
+1. A registered test account exists on the staging environment:
+     Email    : testuser.qa01@nexabank-test.com  (all lowercase)
+     Password : (current password is known — see QA credentials sheet, row 7)
+2. The user is NOT currently logged in (use a fresh browser session or
+   incognito window).
+3. Mailtrap is open and monitoring the staging inbox for testuser.qa01@nexabank-test.com
+4. The staging email service is confirmed operational (run smoke test
+   SMOKE-003 before this test case).
+5. Build version: v3.6.2-staging or later.
+
+================================================================================
+TEST DATA
+================================================================================
+  Test Account Email : testuser.qa01@nexabank-test.com
+  New Password       : Nx@TestP@ss2026!   (meets complexity requirements)
+  Confirm Password   : Nx@TestP@ss2026!
+
+Password complexity rules (from REQ-040):
+  - Minimum 10 characters
+  - At least 1 uppercase letter
+  - At least 1 lowercase letter
+  - At least 1 number
+  - At least 1 special character (!@#$%^&*)
+  - Must not match the last 5 passwords
+
+================================================================================
+STEPS TO EXECUTE
+================================================================================
+
+Step 1 — Navigate to the login page
+  Action  : Open https://staging.nexabank.internal/login in a private/incognito
+             browser window.
+  Expected: Login page loads. Fields visible: Email, Password. Links visible:
+             "Forgot Password?" and "Create an Account".
+
+Step 2 — Access the password reset page
+  Action  : Click the "Forgot Password?" link below the login form.
+  Expected: Redirected to /forgot-password. Page title: "Reset Your Password".
+             A single input field labelled "Email Address" is visible.
+
+Step 3 — Submit the reset request
+  Action  : Enter testuser.qa01@nexabank-test.com in the Email Address field.
+             Click "Send Reset Link".
+  Expected: - "Send Reset Link" button shows a loading spinner briefly.
+             - Page displays the confirmation message:
+               "If an account exists for this email, you will receive a
+                password reset link shortly."
+             - The email field is cleared or disabled.
+             - No error messages appear.
+
+Step 4 — Verify the reset email is received
+  Action  : Switch to Mailtrap. Monitor the inbox for testuser.qa01@nexabank-test.com.
+             Wait up to 60 seconds.
+  Expected: - An email arrives within 60 seconds.
+             - Subject line: "NexaBank: Reset your password"
+             - Sender: no-reply@nexabank.com
+             - Email body contains:
+                 "You requested a password reset for your NexaBank account."
+                 A clearly labelled "Reset Password" button or link.
+                 Text stating the link expires in 60 minutes.
+             - Email is correctly addressed to testuser.qa01@nexabank-test.com.
+
+Step 5 — Open the reset link
+  Action  : Click the "Reset Password" button/link in the email.
+  Expected: - A new browser tab/window opens (or the current tab navigates).
+             - URL contains /reset-password?token=<unique_token>
+             - Page title: "Create a New Password"
+             - Two input fields visible: "New Password" and "Confirm Password"
+             - Password strength indicator is visible.
+
+Step 6 — Enter and submit the new password
+  Action  : Enter Nx@TestP@ss2026! in the "New Password" field.
+             Enter Nx@TestP@ss2026! in the "Confirm Password" field.
+             Click "Reset Password".
+  Expected: - Password strength indicator shows "Strong" or equivalent.
+             - On submit, a loading spinner appears briefly.
+             - User is redirected to /login (or /password-reset-success).
+             - Success message displayed:
+               "Your password has been reset. Please log in with your new password."
+
+Step 7 — Log in with the new password
+  Action  : On the login page, enter:
+               Email    : testuser.qa01@nexabank-test.com
+               Password : Nx@TestP@ss2026!
+             Click "Log In".
+  Expected: - User is authenticated and redirected to the account dashboard.
+             - No error messages appear.
+             - The user's name or account greeting is visible on the dashboard.
+
+Step 8 — Verify the reset link is now invalid (one-time use)
+  Action  : Copy the reset URL from Step 5 and paste it into a new browser tab.
+  Expected: - Page displays an error: "This reset link has already been used
+               or has expired. Please request a new one."
+             - The user is NOT able to set another new password using the same link.
+
+Step 9 — Restore test data (cleanup)
+  Action  : After the test, reset testuser.qa01@nexabank-test.com's password back
+             to the original value (from the QA credentials sheet) using the
+             admin panel at https://staging.nexabank.internal/admin/users.
+  Expected: Test account is restored to its original state for the next test run.
+
+================================================================================
+PASS / FAIL CRITERIA
+================================================================================
+PASS — All expected results in Steps 1–8 match actual results with no
+       deviations. Step 9 cleanup completes successfully.
+
+FAIL — Any of the following occur:
+  - Reset email not received within 60 seconds (see also BUG-117 for
+    mixed-case username variant)
+  - Reset link does not open a valid password reset form
+  - New password is not accepted despite meeting complexity rules
+  - Login with new password fails after successful reset
+  - Reset link remains valid after first use (security defect — critical)
+  - Any unhandled error or blank page appears at any step
+
+================================================================================
+ACTUAL RESULTS LOG
+================================================================================
+(To be filled in during test execution)
+
+Run 1 — Date: ____________  Tester: ____________  Build: ____________
+  Result: PASS / FAIL
+  Notes :
+
+Run 2 — Date: ____________  Tester: ____________  Build: ____________
+  Result: PASS / FAIL
+  Notes :
+
+================================================================================
+NOTES & OBSERVATIONS
+================================================================================
+- BUG-098 (reset link expiring after 5 min instead of 60 min) was resolved in
+  v3.5.1. Verify the link still honours the 60-minute window in each new build.
+- The "one-time use" check in Step 8 is a security-critical assertion. If this
+  fails, raise a P0 security defect immediately and block the release.
+- If the Mailtrap inbox shows the email but it arrives after 60 seconds,
+  log a performance defect (not a functional failure, but must be tracked).
+- This test case is a precondition for TC-056 (MFA Setup after Password Reset).

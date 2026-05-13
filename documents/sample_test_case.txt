@@ -1,0 +1,156 @@
+TEST CASE DOCUMENT — E-Commerce Checkout Flow
+Project: ShopFast Web Application
+Module: Checkout & Payment
+Author: QA Team
+Last Updated: 2026-05-12
+
+================================================================================
+TEST CASE ID: TC-CHECKOUT-001
+TITLE: Successful purchase with a valid credit card
+PRIORITY: High
+STATUS: Active
+RELATED BUG: BUG-4821 (Resolved — order confirmation email was not sent on first attempt)
+================================================================================
+
+DESCRIPTION:
+Verify that a logged-in user can complete a purchase using a valid Visa credit
+card, and that the order confirmation page and email are both triggered correctly.
+
+PRECONDITIONS:
+- User is registered and logged in to ShopFast
+- At least one item is in the shopping cart
+- Test credit card details are available (see test data below)
+- Email sandbox (Mailtrap) is open and monitoring the test inbox
+
+TEST DATA:
+  Card Number : 4111 1111 1111 1111 (Visa test card)
+  Expiry      : 12/27
+  CVV         : 123
+  Billing ZIP : 90210
+
+STEPS TO EXECUTE:
+1. Navigate to https://shopfast-staging.internal/cart
+2. Verify the cart shows the correct item(s) and subtotal.
+3. Click the "Proceed to Checkout" button.
+4. On the Shipping page, confirm the default address is pre-filled.
+   If not, enter: 123 Test Street, Los Angeles, CA 90210.
+5. Click "Continue to Payment".
+6. Select "Credit / Debit Card" as the payment method.
+7. Enter the test card details from the TEST DATA section above.
+8. Click "Place Order".
+9. Observe the page response.
+10. Open Mailtrap and check the test inbox for the order confirmation email.
+
+EXPECTED RESULTS:
+- After Step 2: Cart subtotal matches the sum of all line items plus tax.
+- After Step 8: A loading spinner appears for no longer than 5 seconds.
+- After Step 9: User is redirected to /order-confirmation with a unique Order ID.
+  The page displays: "Thank you for your order!" and lists the purchased items.
+- After Step 10: An email arrives within 60 seconds with subject line
+  "Your ShopFast Order #<ORDER_ID> is confirmed" and contains the correct items,
+  total, and estimated delivery date.
+
+ACTUAL RESULTS: (to be filled in during test execution)
+
+PASS/FAIL CRITERIA:
+  PASS — All expected results match actual results with no deviations.
+  FAIL — Any expected result is missing, incorrect, or the page throws an error.
+
+NOTES:
+- BUG-4821 was caused by a race condition in the email service triggered when
+  the payment processor responded faster than expected. Fixed in release v2.3.1.
+- If the spinner exceeds 5 seconds, capture a HAR file for the network log.
+- Do NOT use real card numbers in staging. Always use the test card above.
+
+================================================================================
+TEST CASE ID: TC-CHECKOUT-002
+TITLE: Declined credit card shows appropriate error message
+PRIORITY: High
+STATUS: Active
+RELATED BUG: BUG-5102 (Open — error message briefly flashes then disappears)
+================================================================================
+
+DESCRIPTION:
+Verify that when a user submits a credit card that is declined by the payment
+processor, a clear and persistent error message is displayed and the user is
+not charged.
+
+PRECONDITIONS:
+- User is registered and logged in to ShopFast
+- At least one item is in the shopping cart
+- Declined test card details are available (see test data below)
+
+TEST DATA:
+  Card Number : 4000 0000 0000 0002 (Visa — always declined)
+  Expiry      : 12/27
+  CVV         : 123
+  Billing ZIP : 90210
+
+STEPS TO EXECUTE:
+1. Navigate to https://shopfast-staging.internal/cart
+2. Click "Proceed to Checkout".
+3. Confirm or enter the shipping address.
+4. Click "Continue to Payment".
+5. Select "Credit / Debit Card".
+6. Enter the declined test card details from TEST DATA above.
+7. Click "Place Order".
+8. Observe the page response.
+
+EXPECTED RESULTS:
+- After Step 7: A loading spinner appears briefly.
+- After Step 8: An inline error message appears in red text directly below the
+  card input fields reading: "Your card was declined. Please try a different
+  payment method or contact your bank."
+- The error message remains visible until the user takes action.
+- The user is NOT redirected away from the payment page.
+- No order ID is generated.
+- No confirmation email is sent.
+
+ACTUAL RESULTS: (to be filled in during test execution)
+
+PASS/FAIL CRITERIA:
+  PASS — Error message appears, persists, and no order is created.
+  FAIL — Error message is missing, disappears automatically (see BUG-5102),
+         or an order is incorrectly created for a declined card.
+
+NOTES:
+- BUG-5102 is still open as of 2026-05-12. When executing this test, confirm
+  whether the bug is reproducible and update the bug report with current findings.
+- Regression introduced in v2.4.0 — check builds prior to that for comparison.
+
+================================================================================
+TEST CASE ID: TC-CHECKOUT-003
+TITLE: Guest checkout completes without account creation
+PRIORITY: Medium
+STATUS: Active
+RELATED BUG: None
+================================================================================
+
+DESCRIPTION:
+Verify that a user who is NOT logged in can complete a purchase as a guest,
+without being forced to create an account, and receives an order confirmation.
+
+PRECONDITIONS:
+- User is NOT logged in (use incognito/private browsing window)
+- At least one item has been added to cart as a guest
+
+STEPS TO EXECUTE:
+1. Open a private browsing window and navigate to https://shopfast-staging.internal
+2. Add any in-stock item to the cart.
+3. Click "Proceed to Checkout".
+4. On the login prompt, click "Continue as Guest".
+5. Enter guest email: testguest@mailtest.com
+6. Enter shipping address: 456 Guest Lane, Austin, TX 73301
+7. Click "Continue to Payment".
+8. Enter the valid test card (TC-CHECKOUT-001 test data).
+9. Click "Place Order".
+
+EXPECTED RESULTS:
+- After Step 4: A guest checkout form appears — no account creation required.
+- After Step 9: Order confirmation page displays with a unique Order ID.
+- A confirmation email is sent to testguest@mailtest.com.
+- No account is created in the user database for this email.
+
+PASS/FAIL CRITERIA:
+  PASS — Purchase completes, email received, no account created.
+  FAIL — System forces account creation, order fails, or no email is sent.

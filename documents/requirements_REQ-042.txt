@@ -1,0 +1,161 @@
+REQUIREMENTS DOCUMENT
+================================================================================
+Requirement ID : REQ-042
+Title          : Multi-Factor Authentication (MFA) via Time-Based OTP
+Project        : NexaBank Customer Portal
+Module         : Authentication & Security
+Author         : Product Owner, Sarah L.
+Reviewed By    : Tech Lead, Dev Team, QA Lead
+Date Created   : 2026-03-10
+Last Updated   : 2026-04-15
+Status         : Approved — In Development (Sprint 21-22)
+================================================================================
+
+USER STORY
+================================================================================
+As a NexaBank customer,
+I want to enable two-factor authentication on my account using a TOTP
+authenticator app (such as Google Authenticator or Authy),
+So that my account is protected even if my password is compromised.
+
+================================================================================
+BUSINESS CONTEXT
+================================================================================
+NexaBank's security audit (Q1 2026) flagged that password-only authentication
+represents the highest account takeover risk. Regulatory guidelines (PCI-DSS
+v4.0, section 8.4) require MFA for all customer-facing financial applications
+by Q3 2026. This requirement addresses both the security risk and the
+compliance deadline.
+
+================================================================================
+ACCEPTANCE CRITERIA
+================================================================================
+
+AC-1 — MFA Setup (Happy Path)
+  GIVEN a logged-in user who has not yet enabled MFA
+  WHEN the user navigates to Account Settings > Security > Enable MFA
+  THEN the system generates a unique TOTP secret for the user's account
+   AND displays a QR code that can be scanned by a TOTP authenticator app
+   AND displays the raw secret key as a text string (for manual entry)
+   AND prompts the user to enter a 6-digit code from the app to confirm setup
+
+AC-2 — MFA Setup Confirmation
+  GIVEN a user who has scanned the QR code and entered the correct 6-digit code
+  WHEN the user clicks "Confirm and Enable MFA"
+  THEN the system marks MFA as enabled on the user's account
+   AND displays a success message: "Two-factor authentication is now active"
+   AND generates and displays 8 single-use backup codes
+   AND sends a confirmation email: "MFA has been enabled on your NexaBank account"
+
+AC-3 — Login with MFA Enabled
+  GIVEN a user whose account has MFA enabled
+  WHEN the user submits valid username and password on the login page
+  THEN the system does NOT grant access yet
+   AND redirects the user to a second step: "Enter your 6-digit authentication code"
+   AND the user must enter the current TOTP code from their authenticator app
+   AND access is granted only when the TOTP code is valid and not expired
+
+AC-4 — Invalid or Expired TOTP Code
+  GIVEN a user on the MFA verification step
+  WHEN the user enters an incorrect or expired 6-digit code
+  THEN the system displays: "Incorrect code. Please check your authenticator app
+       and try again."
+   AND the user remains on the MFA verification page (not logged in)
+   AND after 5 consecutive failed attempts, the account is temporarily locked
+       for 15 minutes
+
+AC-5 — Backup Code Usage
+  GIVEN a user who has lost access to their authenticator app
+  WHEN the user clicks "Use a backup code" on the MFA verification page
+   AND enters one of their 8 backup codes
+  THEN access is granted
+   AND the used backup code is invalidated (cannot be reused)
+   AND the user sees a warning: "You have N backup codes remaining. Consider
+       re-registering your authenticator app."
+
+AC-6 — MFA Disable
+  GIVEN a user who has MFA enabled and is currently logged in with MFA
+  WHEN the user navigates to Account Settings > Security > Disable MFA
+   AND confirms by entering their current password AND a valid TOTP code
+  THEN MFA is disabled on the account
+   AND a notification email is sent: "MFA has been disabled on your account.
+       If you did not do this, contact support immediately."
+
+================================================================================
+FUNCTIONAL REQUIREMENTS
+================================================================================
+
+FR-1  The system shall use TOTP (RFC 6238) with a 30-second window and
+      SHA-1 HMAC as the algorithm (compatible with Google Authenticator, Authy,
+      Microsoft Authenticator, and 1Password).
+
+FR-2  The TOTP secret shall be generated server-side using a cryptographically
+      secure random number generator (minimum 160-bit entropy).
+
+FR-3  The TOTP secret shall be stored encrypted at rest using AES-256.
+      It shall never be returned to the client after initial setup.
+
+FR-4  The QR code displayed during setup shall encode an otpauth:// URI
+      conforming to the Key URI Format specification.
+
+FR-5  Backup codes shall be exactly 8 codes, each 10 characters long,
+      alphanumeric, case-insensitive. They shall be hashed (bcrypt) before
+      storage. The plain-text codes are shown to the user exactly once.
+
+FR-6  The system shall accept TOTP codes from the current 30-second window
+      and one window before/after (total tolerance: ±30 seconds) to account
+      for clock drift.
+
+FR-7  All MFA events (enabled, disabled, failed attempt, backup code used,
+      account locked) shall be written to the security audit log with
+      timestamp, user ID, and IP address.
+
+================================================================================
+NON-FUNCTIONAL REQUIREMENTS
+================================================================================
+
+NFR-1  The MFA verification step shall add no more than 500ms latency to the
+       login flow (p95, measured at the API gateway).
+
+NFR-2  The QR code and setup page shall be accessible (WCAG 2.1 AA) — the raw
+       secret key text alternative satisfies screen reader requirements.
+
+NFR-3  MFA setup, verification, and disable flows shall be tested for
+       compatibility with: iOS Safari 16+, Chrome 120+, Firefox 122+,
+       Edge 120+.
+
+================================================================================
+DEPENDENCIES
+================================================================================
+- DEP-1: REQ-038 (User Account Settings page) must be deployed first — MFA
+         settings live within that page.
+- DEP-2: Third-party TOTP library approved by Security team (pyotp v2.9+).
+- DEP-3: Email notification service (REQ-031) must be available for AC-2 and
+         AC-6 confirmation emails.
+- DEP-4: Security audit logging infrastructure (REQ-039) must be in place for
+         FR-7.
+
+================================================================================
+OUT OF SCOPE (v1)
+================================================================================
+- SMS-based OTP (considered less secure; may be added in v2)
+- Hardware security keys (FIDO2 / WebAuthn) — planned for Q4 2026
+- MFA enforcement for specific transaction types only (all-or-nothing in v1)
+- Admin-initiated MFA reset without user involvement
+
+================================================================================
+TEST CASES LINKED
+================================================================================
+- TC-051 : Happy path — enable MFA and complete first MFA login
+- TC-052 : Negative — invalid TOTP code, account lockout after 5 attempts
+- TC-053 : Backup code usage and invalidation
+- TC-054 : Disable MFA with valid credentials
+- TC-055 : Accessibility audit of MFA setup flow
+
+================================================================================
+SIGN-OFF
+================================================================================
+Product Owner  : Sarah L.        Approved 2026-04-10
+Tech Lead      : Ravi M.         Approved 2026-04-12
+QA Lead        : Bala K.         Approved 2026-04-15
+Security Team  : Priya T.        Approved 2026-04-14
