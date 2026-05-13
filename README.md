@@ -4,7 +4,7 @@
 
 ## Overview
 
-QA Knowledge Assistant is a fully local Retrieval-Augmented Generation (RAG) system that lets you ask natural-language questions about your own QA documents — test cases, bug reports, and requirements specs — and get grounded, cited answers without sending any data to the cloud. Built as my first hands-on RAG prototype using Claude Code, it demonstrates the core AI engineering skills I am developing as I transition from manual QA into AI engineering: document ingestion, vector search, prompt engineering, and local LLM integration.
+QA Knowledge Assistant is a fully local Retrieval-Augmented Generation (RAG) system that lets you ask natural-language questions about your own QA documents — test cases, bug reports, and requirements specs — and get grounded, cited answers without sending any data to the cloud. Built as my first hands-on RAG prototype using Claude Code, it demonstrates the core AI engineering skills I am developing on AI engineering: document ingestion, vector search, prompt engineering, and local LLM integration.
 
 ---
 
@@ -292,7 +292,7 @@ The most important architectural insight: RAG is not about making the LLM smarte
 
 ## Background
 
-I am a manual QA engineer with experience in test case design, bug reporting, and requirements analysis, currently transitioning into AI engineering. QA skills transfer more directly to RAG evaluation than most people expect: writing a good test case (clear preconditions, precise expected results, edge case coverage) is structurally the same skill as writing a good RAG evaluation — you define the question, the correct answer, and the conditions under which the system should pass or fail. Building this prototype was my way of making that connection concrete: I used real QA artifacts as the document corpus, and I applied a tester's mindset to identify where the pipeline fails (the figure extraction limitation, the cross-chunk confusion bug) and why. I built it entirely with local, open-source tools using Claude Code as my AI engineering pair, with the goal of understanding every layer of the stack — not just running someone else's tutorial.
+I am a QA Lead with experience in test case design, bug reporting, and requirements analysis, currently transitioning into AI engineering. QA skills transfer more directly to RAG evaluation than most people expect: writing a good test case (clear preconditions, precise expected results, edge case coverage) is structurally the same skill as writing a good RAG evaluation — you define the question, the correct answer, and the conditions under which the system should pass or fail. Building this prototype was my way of making that connection concrete: I used real QA artifacts as the document corpus, and I applied a tester's mindset to identify where the pipeline fails (the figure extraction limitation, the cross-chunk confusion bug) and why. I built it entirely with local, open-source tools using Claude Code as my AI engineering pair, with the goal of understanding every layer of the stack — not just running someone else's tutorial.
 
 ---
 
